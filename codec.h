@@ -1,73 +1,52 @@
 #ifndef REST_RPC_CODEC_H_
 #define REST_RPC_CODEC_H_
 
-#include <msgpack.hpp>
+//#include <msgpack.hpp>
+#include <nlohmann/json.hpp>
+
+using nlohmann::json;
 
 namespace rest_rpc {
 namespace rpc_service {
 
 struct msgpack_codec {
-  using buffer_type = std::vector<char>;
-  class buffer_t {
-   public:
-    buffer_t() : buffer_t(0) {}
 
-    explicit buffer_t(size_t len) : buffer_(len, 0), offset_(0) {}
-
-    buffer_t(buffer_t const&) = default;
-    buffer_t(buffer_t&&) = default;
-    buffer_t& operator=(buffer_t const&) = default;
-    buffer_t& operator=(buffer_t&&) = default;
-
-    void write(char const* data, size_t length) {
-      if (buffer_.size() - offset_ < length) buffer_.resize(length + offset_);
-
-      std::memcpy(buffer_.data() + offset_, data, length);
-      offset_ += length;
+    template<typename... Args>
+    static std::string pack_args(Args&&... args)
+    {
+        const auto & args_tuple = std::make_tuple(std::forward<Args>(args)...);
+        const auto & buffer = json(args_tuple).dump();
+        return std::move(buffer);
     }
 
-    std::vector<char> release() const noexcept { return std::move(buffer_); }
+    template<typename Arg, typename... Args, typename = typename std::enable_if<std::is_enum<Arg>::value>::type>
+    static std::string pack_args_str(Arg arg, Args&&... args)
+    {
+        const auto & args_tuple = std::make_tuple(std::forward<Args>(args)...);
+        //json::dump()
+        const auto & buffer = json(args_tuple).dump();
+        return std::move(buffer);
+    }
 
-   private:
-    std::vector<char> buffer_;
-    size_t offset_;
-  };
+    template<typename T>
+    std::string pack(T&& t) const
+    {
+        const auto & buffer = json(t).dump();
+        return std::move(buffer);
+    }
 
-  template<typename... Args>
-  static buffer_type pack_args(Args&&... args) {
-    buffer_t buffer;
-    auto args_tuple = std::make_tuple(std::forward<Args>(args)...);
-    msgpack::pack(buffer, args_tuple);
-    return buffer.release();
-  }
+    template<typename T>
+    T unpack(char const* data, size_t length)
+    {
+        try {
+            auto arr = json::parse(std::string(data, length));
+            return arr.at(0).get<T>();
+        }
+        catch (const std::exception & e) { 
+            throw std::invalid_argument(std::string("args not match. ") + e.what());
+        }
+    }
 
-  template<typename Arg, typename... Args,
-           typename = typename std::enable_if<std::is_enum<Arg>::value>::type>
-  static std::string pack_args_str(Arg arg, Args&&... args) {
-    buffer_t buffer;
-    auto args_tuple = std::make_tuple((int)arg, std::forward<Args>(args)...);
-    msgpack::pack(buffer, args_tuple);
-    auto ret = buffer.release();
-    return std::string(ret.data(), ret.size());
-  }
-
-  template<typename T>
-  buffer_type pack(T&& t) const {
-    buffer_t buffer;
-    msgpack::pack(buffer, std::forward<T>(t));
-    return buffer.release();
-  }
-
-  template<typename T>
-  T unpack(char const* data, size_t length) {
-    try {
-      msgpack::unpack(&msg_, data, length);
-      return msg_.get().as<T>();
-    } catch (...) { throw std::invalid_argument("Args not match!"); }
-  }
-
- private:
-  msgpack::unpacked msg_;
 };
 }  // namespace rpc_service
 }  // namespace rest_rpc

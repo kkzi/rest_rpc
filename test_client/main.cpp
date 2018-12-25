@@ -2,6 +2,8 @@
 #include "test_client.hpp"
 #include "../codec.h"
 
+#include <nlohmann/json.hpp>
+
 using namespace rest_rpc;
 using namespace rest_rpc::rpc_service;
 
@@ -48,6 +50,12 @@ void test_hello() {
 }
 
 int main() {
+
+    auto tp = std::make_tuple(0, "3");
+
+    std::cout << json(tp).dump() << std::endl;
+
+
 	test_hello();
 	test_add();
 	test_translate();
