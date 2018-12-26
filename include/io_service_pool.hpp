@@ -1,18 +1,11 @@
-#ifndef REST_RPC_IO_SERVICE_POOL_H_
-#define REST_RPC_IO_SERVICE_POOL_H_
+#pragma once
 
-#include <boost/asio.hpp>
 #include <vector>
 #include <memory>
+#include <boost/asio.hpp>
 #include <boost/noncopyable.hpp>
-//#include <boost/shared_ptr.hpp>
-//#include <stdexcept>
-//#include <boost/thread/thread.hpp>
-//#include <boost/bind.hpp>
-//#include <boost/shared_ptr.hpp>
 
 namespace rest_rpc {
-namespace rpc_service {
 
 class io_service_pool : private boost::noncopyable
 {
@@ -50,16 +43,16 @@ public:
         }
     }
 
-    void stop() 
+    void stop()
     {
-        for (std::size_t i = 0; i < io_services_.size(); ++i) 
+        for (std::size_t i = 0; i < io_services_.size(); ++i)
         {
             io_services_[i]->stop();
             io_services_[i]->reset();
         }
     }
 
-    boost::asio::io_service& get_io_service() 
+    boost::asio::io_service& get_io_service()
     {
         boost::asio::io_service& io_service = *io_services_[next_io_service_];
         ++next_io_service_;
@@ -80,7 +73,5 @@ private:
     /// The next io_service to use for a connection.
     std::size_t next_io_service_;
 };
-}  // namespace rpc_service
-}  // namespace rest_rpc
 
-#endif  // REST_RPC_IO_SERVICE_POOL_H_
+}  // namespace rest_rpc

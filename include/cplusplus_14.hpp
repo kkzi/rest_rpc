@@ -1,31 +1,35 @@
-#ifndef REST_RPC_CPLUSPLUS_14_H_
-#define REST_RPC_CPLUSPLUS_14_H_
+#pragma once
 
 #if __cplusplus == 201103L
 
 namespace std {
 template<class T>
-struct unique_if {
+struct unique_if 
+{
     typedef unique_ptr<T> single_object;
 };
 
 template<class T>
-struct unique_if<T[]> {
+struct unique_if<T[]> 
+{
     typedef unique_ptr<T[]> unknown_bound;
 };
 
 template<class T, size_t N>
-struct unique_if<T[N]> {
+struct unique_if<T[N]> 
+{
     typedef void known_bound;
 };
 
 template<class T, class... Args>
-typename unique_if<T>::single_object make_unique(Args&&... args) {
+typename unique_if<T>::single_object make_unique(Args&&... args) 
+{
     return unique_ptr<T>(new T(forward<Args>(args)...));
 }
 
 template<class T>
-typename unique_if<T>::unknown_bound make_unique(size_t n) {
+typename unique_if<T>::unknown_bound make_unique(size_t n) 
+{
     typedef typename remove_extent<T>::type U;
     return unique_ptr<T>(new U[n]());
 }
@@ -34,7 +38,8 @@ template<class T, class... Args>
 typename unique_if<T>::known_bound make_unique(Args&&...) = delete;
 
 template<size_t... Ints>
-struct index_sequence {
+struct index_sequence 
+{
     using type = index_sequence;
     using value_type = size_t;
     static constexpr std::size_t size() noexcept { return sizeof...(Ints); }
@@ -76,24 +81,25 @@ template<typename T>
 using decay_t = typename decay<T>::type;
 
 template<typename F, typename Tuple, size_t... Idx>
-auto apply_helper(F&& f, Tuple&& tp, std::index_sequence<Idx...>) -> decltype(std::forward<F>(f)(std::get<Idx>(std::forward<Tuple>(tp))...)) {
+auto apply_helper(F&& f, Tuple&& tp, std::index_sequence<Idx...>) -> decltype(std::forward<F>(f)(std::get<Idx>(std::forward<Tuple>(tp))...)) 
+{
     return std::forward<F>(f)(std::get<Idx>(std::forward<Tuple>(tp))...);
 }
 
 template<typename F, typename Tuple>
 auto apply(F&& f, Tuple&& tp) -> decltype(apply_helper(std::forward<F>(f), std::forward<Tuple>(tp),
-    std::make_index_sequence<std::tuple_size<decay_t<Tuple>>::value>{})) {
+    std::make_index_sequence<std::tuple_size<decay_t<Tuple>>::value>{}))
+{
     return apply_helper(std::forward<F>(f), std::forward<Tuple>(tp),
         std::make_index_sequence<std::tuple_size<decay_t<Tuple>>::value>{});
 }
 
 template<typename F, typename... Args>
-auto invoke(F&& f, Args&&... args) -> decltype(std::forward<F>(f)(std::forward<Args>(args)...)) {
+auto invoke(F&& f, Args&&... args) -> decltype(std::forward<F>(f)(std::forward<Args>(args)...))
+{
     return std::forward<F>(f)(std::forward<Args>(args)...);
 }
 
 }  // namespace std
 
 #endif
-
-#endif  // REST_RPC_CPLUSPLUS_14_H_

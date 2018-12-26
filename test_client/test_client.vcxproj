@@ -78,7 +78,7 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(BOOST);C:\dev\sss\msgpack-c\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(BOOST);../include;../deps;</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(BOOST)\lib64-msvc-14.0</AdditionalLibraryDirectories>
@@ -90,7 +90,7 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(BOOST);C:\dev\sss\json\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(BOOST);../include;../deps;</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(BOOST)\lib64-msvc-14.0</AdditionalLibraryDirectories>
@@ -104,7 +104,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(BOOST);C:\dev\sss\msgpack-c\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(BOOST);../include;../deps;</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -120,7 +120,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(BOOST);C:\dev\sss\json\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(BOOST);../include;../deps;</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>

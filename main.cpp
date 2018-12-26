@@ -1,6 +1,6 @@
-#include "rpc_server.h"
+#include "rpc_server.hpp"
+
 using namespace rest_rpc;
-using namespace rpc_service;
 
 struct dummy {
     int add(connection* conn, int a, int b) { return a + b; }

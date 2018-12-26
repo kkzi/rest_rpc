@@ -1,17 +1,15 @@
-#ifndef REST_RPC_CONNECTION_H_
-#define REST_RPC_CONNECTION_H_
+#pragma once
 
 #include <iostream>
 #include <memory>
+#include <string>
 #include <boost/asio.hpp>
 #include <boost/asio/deadline_timer.hpp>
-#include "router.h"
+#include "router.hpp"
 
 using boost::asio::ip::tcp;
 
 namespace rest_rpc
-{
-namespace rpc_service
 {
 
 class connection : public std::enable_shared_from_this<connection>, private boost::noncopyable
@@ -126,8 +124,8 @@ private:
             }
 
             if (!ec) {
-                router& _router = router::get();
-                _router.route(data_.data(), length, this);
+                std::string data(data_.begin(), data_.end());
+                router::get().route(data, this);
             }
             else {
                 //LOG(INFO) << ec.message();
@@ -179,7 +177,5 @@ private:
     std::atomic_bool has_closed_;
 };
 
-}  // namespace rpc_service
 }  // namespace rest_rpc
 
-#endif  // REST_RPC_CONNECTION_H_

@@ -1,23 +1,25 @@
 #pragma once
 #include <string>
+#include <iostream>
 #include <boost/asio.hpp>
-#include "../codec.h"
+#include <json/json_util.h>
+#include "packer.hpp"
+#include "meta_util.hpp"
 
 using boost::asio::ip::tcp;
 using namespace rest_rpc;
-using namespace rest_rpc::rpc_service;
 
 class test_client : private boost::noncopyable
 {
 public:
     test_client(boost::asio::io_service& io_service)
         : io_service_(io_service)
-        , socket_(io_service) 
+        , socket_(io_service)
     {
 
     }
 
-    void connect(const std::string& addr, const std::string& port) 
+    void connect(const std::string& addr, const std::string& port)
     {
         tcp::resolver resolver(io_service_);
         tcp::resolver::query query(tcp::v4(), addr, port);
@@ -26,13 +28,14 @@ public:
         boost::asio::connect(socket_, endpoint_iterator);
     }
 
-    std::string call(const char* data, size_t size) 
+    std::string call(const std::string & content)
     {
-        bool r = send(data, size);
+        bool r = send(content);
         if (!r) {
             throw std::runtime_error("call failed");
         }
 
+        int32_t size = 0;
         socket_.receive(boost::asio::buffer(&size, 4));
         std::string recv_data;
         recv_data.resize(size);
@@ -40,41 +43,31 @@ public:
         return recv_data;
     }
 
-    std::string call(std::string content) 
-    {
-        return call(content.data(), content.size());
-    }
-
     template<typename T = void, typename... Args>
-    typename std::enable_if<std::is_void<T>::value>::type call(std::string rpc_name, Args... args) 
+    typename std::enable_if<std::is_void<T>::value>::type call(std::string rpc_name, Args... args)
     {
-        auto ret = msgpack_codec::pack_args(rpc_name, args...);
-        call(ret.data(), ret.size());
+        auto ret = packer::request(rpc_name, args...);
+        call(ret);
         return;
     }
 
     template<typename T, typename... Args>
-    typename std::enable_if<!std::is_void<T>::value, T>::type call(std::string rpc_name, Args... args) 
+    typename std::enable_if<!std::is_void<T>::value, T>::type call(std::string rpc_name, Args... args)
     {
-        msgpack_codec codec;
-        auto ret = codec.pack_args(rpc_name, args...);
+        auto req = packer::request(rpc_name, args...);
+        const auto & rep = json::parse(call(req));
 
-        auto result = call(ret.data(), ret.size());
+        std::string text = rep.dump();
 
-        auto tp = codec.unpack<T>(result.data(), result.size());
-        return tp;
-        //try {
-        //    return tp.value(0).get<T>();
-        //    //return tp.get<T>(0);
-        //}
-        //catch (const std::exception & e) {
-        //    throw std::logic_error(e.what());
-        //}
+        //auto code = json_util::get<int>(rep, "code", -1);
+        //auto content = json_util::get<T>(rep, "content");
+        return json_util::get<T>(rep, "content");
     }
 
 private:
-    bool send(const char* data, size_t size) 
+    bool send(const std::string & data)
     {
+        auto size = data.size();
         std::vector<boost::asio::const_buffer> message;
         message.push_back(boost::asio::buffer(&size, 4));
         message.push_back(boost::asio::buffer(data, size));

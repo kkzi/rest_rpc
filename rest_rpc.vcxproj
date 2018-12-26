@@ -22,7 +22,7 @@
     <VCProjectVersion>15.0</VCProjectVersion>
     <ProjectGuid>{7A23D1B8-F1FF-4584-9F65-8920EF333610}</ProjectGuid>
     <RootNamespace>restrpc</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -81,7 +81,7 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(BOOST)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(BOOST);include;deps;</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(BOOST)\lib64-msvc-14.0</AdditionalLibraryDirectories>
@@ -93,7 +93,7 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(BOOST);C:\dev\sss\json\include;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(BOOST);include;deps;</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(BOOST)\lib64-msvc-14.0</AdditionalLibraryDirectories>
@@ -107,7 +107,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(BOOST)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(BOOST);include;deps;</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -123,7 +123,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(BOOST)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(BOOST);include;deps;</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -132,17 +132,19 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="codec.h" />
-    <ClInclude Include="common.h" />
-    <ClInclude Include="connection.h" />
-    <ClInclude Include="cplusplus_14.h" />
-    <ClInclude Include="io_service_pool.h" />
-    <ClInclude Include="meta_util.hpp" />
-    <ClInclude Include="router.h" />
-    <ClInclude Include="rpc_server.h" />
+    <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="main.cpp" />
+    <ClInclude Include="deps\json\json.hpp" />
+    <ClInclude Include="deps\json\json_util.h" />
+    <ClInclude Include="include\common.hpp" />
+    <ClInclude Include="include\connection.hpp" />
+    <ClInclude Include="include\cplusplus_14.hpp" />
+    <ClInclude Include="include\io_service_pool.hpp" />
+    <ClInclude Include="include\meta_util.hpp" />
+    <ClInclude Include="include\packer.hpp" />
+    <ClInclude Include="include\router.hpp" />
+    <ClInclude Include="include\rpc_server.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

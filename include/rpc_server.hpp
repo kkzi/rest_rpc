@@ -1,16 +1,18 @@
-#ifndef REST_RPC_RPC_SERVER_H_
-#define REST_RPC_RPC_SERVER_H_
+#pragma once
 
 #include <thread>
-#include "connection.h"
-#include "io_service_pool.h"
-#include "router.h"
+#include "connection.hpp"
+#include "io_service_pool.hpp"
+#include "router.hpp"
 
+
+namespace rest_rpc
+{
 using boost::asio::ip::tcp;
 
-namespace rest_rpc {
-namespace rpc_service {
-class rpc_server : private boost::noncopyable {
+class rpc_server : private boost::noncopyable
+{
+
 public:
     rpc_server(short port, size_t size, size_t timeout_seconds = 15, size_t check_seconds = 10)
         : io_service_pool_(size)
@@ -37,13 +39,13 @@ public:
         thd_ = std::make_shared<std::thread>([this] { io_service_pool_.run(); });
     }
 
-    template<ExecMode model = ExecMode::sync, typename Function>
+    template<execute_mode model = execute_mode::SYNC, typename Function>
     void register_handler(std::string const& name, const Function& f)
     {
         router::get().register_handler<model>(name, f);
     }
 
-    template<ExecMode model = ExecMode::sync, typename Function, typename Self>
+    template<execute_mode model = execute_mode::SYNC, typename Function, typename Self>
     void register_handler(std::string const& name, const Function& f, Self* self)
     {
         router::get().register_handler<model>(name, f, self);
@@ -111,7 +113,5 @@ private:
     std::shared_ptr<std::thread> check_thread_;
     size_t check_seconds_;
 };
-}  // namespace rpc_service
-}  // namespace rest_rpc
 
-#endif  // REST_RPC_RPC_SERVER_H_
+}  // namespace rest_rpc

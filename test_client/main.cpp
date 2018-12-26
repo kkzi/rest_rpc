@@ -1,63 +1,53 @@
 #include <iostream>
 #include "test_client.hpp"
-#include "../codec.h"
-
-#include <nlohmann/json.hpp>
 
 using namespace rest_rpc;
-using namespace rest_rpc::rpc_service;
 
 void test_add() {
-	try{
-		boost::asio::io_service io_service;
-		test_client client(io_service);
-		client.connect("127.0.0.1", "9000");
+    try {
+        boost::asio::io_service io_service;
+        test_client client(io_service);
+        client.connect("127.0.0.1", "9000");
 
-		auto result = client.call<int>("add", 1, 2);
+        auto result = client.call<int>("add", 1, 2);
 
-		std::cout << result << std::endl;
-	}
-	catch (const std::exception& e){
-		std::cout << e.what() << std::endl;
-	}
+        std::cout << result << std::endl;
+    }
+    catch (const std::exception& e) {
+        std::cout << e.what() << std::endl;
+    }
 }
 
 void test_translate() {
-	try {
-		boost::asio::io_service io_service;
-		test_client client(io_service);
-		client.connect("127.0.0.1", "9000");
+    try {
+        boost::asio::io_service io_service;
+        test_client client(io_service);
+        client.connect("127.0.0.1", "9000");
 
-		auto result = client.call<std::string>("translate", "hello");
-		std::cout << result << std::endl;
-	}
-	catch (const std::exception& e) {
-		std::cout << e.what() << std::endl;
-	}
+        auto result = client.call<std::string>("translate", "hello");
+        std::cout << result << std::endl;
+    }
+    catch (const std::exception& e) {
+        std::cout << e.what() << std::endl;
+    }
 }
 
 void test_hello() {
-	try {
-		boost::asio::io_service io_service;
-		test_client client(io_service);
-		client.connect("127.0.0.1", "9000");
+    try {
+        boost::asio::io_service io_service;
+        test_client client(io_service);
+        client.connect("127.0.0.1", "9000");
 
-		client.call("hello", "purecpp");
-	}
-	catch (const std::exception& e) {
-		std::cout << e.what() << std::endl;
-	}
+        client.call("hello", "purecpp");
+    }
+    catch (const std::exception& e) {
+        std::cout << e.what() << std::endl;
+    }
 }
 
 int main() {
-
-    auto tp = std::make_tuple(0, "3");
-
-    std::cout << json(tp).dump() << std::endl;
-
-
-	test_hello();
-	test_add();
-	test_translate();
-	return 0;
+    test_hello();
+    test_add();
+    test_translate();
+    return 0;
 }
