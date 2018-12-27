@@ -1,8 +1,8 @@
 #pragma once
 
 #include <thread>
+#include "io_context_pool.hpp"
 #include "connection.hpp"
-#include "io_service_pool.hpp"
 #include "router.hpp"
 
 
@@ -10,48 +10,47 @@ namespace rest_rpc
 {
 using boost::asio::ip::tcp;
 
-class rpc_server : private boost::noncopyable
+class rpc_server final : private boost::noncopyable
 {
 
 public:
     rpc_server(short port, size_t size, size_t timeout_seconds = 15, size_t check_seconds = 10)
-        : io_service_pool_(size)
-        , acceptor_(io_service_pool_.get_io_service(), tcp::endpoint(tcp::v4(), port))
+        : io_pool_(size)
+        , acceptor_(io_pool_.get_io_service(), tcp::endpoint(tcp::v4(), port))
         , timeout_seconds_(timeout_seconds)
         , check_seconds_(check_seconds)
     {
         using namespace std::placeholders;
         router::get().set_callback(std::bind(&rpc_server::callback, this, _1, _2, _3, _4));
         do_accept();
-        check_thread_ = std::make_shared<std::thread>([this] {
-            clean();
-        });
+        check_thread_ = std::make_shared<std::thread>(std::bind(&rpc_server::clean, this));
     }
 
     ~rpc_server()
     {
-        io_service_pool_.stop();
+        io_pool_.stop();
         thd_->join();
     }
 
     void run()
     {
-        thd_ = std::make_shared<std::thread>([this] { io_service_pool_.run(); });
+        thd_ = std::make_shared<std::thread>([this] { io_pool_.run(); });
+        //thd_ = std::make_shared<std::thread>(std::bind( &io_context_pool::run, io_pool_));
     }
 
     template<execute_mode model = execute_mode::SYNC, typename Function>
-    void register_handler(std::string const& name, const Function& f)
+    void register_handler(std::string const & name, const Function & f)
     {
         router::get().register_handler<model>(name, f);
     }
 
     template<execute_mode model = execute_mode::SYNC, typename Function, typename Self>
-    void register_handler(std::string const& name, const Function& f, Self* self)
+    void register_handler(std::string const & name, const Function & f, Self * self)
     {
         router::get().register_handler<model>(name, f, self);
     }
 
-    void response(int64_t conn_id, const char* data, size_t size)
+    void response(int64_t conn_id, const char * data, size_t size)
     {
         std::unique_lock<std::mutex> lock(mtx_);
         auto it = connections_.find(conn_id);
@@ -63,7 +62,7 @@ public:
 private:
     void do_accept()
     {
-        conn_.reset(new connection(io_service_pool_.get_io_service(), timeout_seconds_));
+        conn_.reset(new connection(io_pool_.get_io_service(), timeout_seconds_));
         acceptor_.async_accept(conn_->socket(), [this](boost::system::error_code ec) {
             if (ec) {
                 //LOG(INFO) << "acceptor error: " << ec.message();
@@ -96,12 +95,12 @@ private:
         }
     }
 
-    void callback(const std::string& topic, const std::string& result, connection* conn, bool has_error = false)
+    void callback(const std::string & topic, const std::string & result, connection * conn, bool has_error = false)
     {
         response(conn->conn_id(), result.data(), result.size());
     }
 
-    io_service_pool io_service_pool_;
+    io_context_pool io_pool_;
     tcp::acceptor acceptor_;
     std::shared_ptr<connection> conn_;
     std::shared_ptr<std::thread> thd_;

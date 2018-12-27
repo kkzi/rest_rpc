@@ -10,7 +10,7 @@ namespace packer
 
 
 template<typename ... Args>
-std::string request(const std::string & url, Args&& ... args)
+std::string request(const std::string & url, Args && ... args)
 {
     return json{
         {"url", url},
@@ -41,5 +41,5 @@ std::string success()
 }
 
 
-}
-}
+} // namespace packer
+} // namespace rest_rpc 

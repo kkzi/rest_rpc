@@ -140,7 +140,7 @@
     <ClInclude Include="include\common.hpp" />
     <ClInclude Include="include\connection.hpp" />
     <ClInclude Include="include\cplusplus_14.hpp" />
-    <ClInclude Include="include\io_service_pool.hpp" />
+    <ClInclude Include="include\io_context_pool.hpp" />
     <ClInclude Include="include\meta_util.hpp" />
     <ClInclude Include="include\packer.hpp" />
     <ClInclude Include="include\router.hpp" />

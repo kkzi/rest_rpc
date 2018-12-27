@@ -22,9 +22,6 @@
     <ClInclude Include="include\cplusplus_14.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\io_service_pool.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="include\meta_util.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -44,6 +41,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="deps\json\json.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\io_context_pool.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

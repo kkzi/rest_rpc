@@ -12,7 +12,7 @@ using boost::asio::ip::tcp;
 namespace rest_rpc
 {
 
-class connection : public std::enable_shared_from_this<connection>, private boost::noncopyable
+class connection final : public std::enable_shared_from_this<connection>, private boost::noncopyable
 {
 public:
     connection(boost::asio::io_service& io_service, std::size_t timeout_seconds)
