@@ -1,13 +1,15 @@
 #include <iostream>
 #include "test_client.hpp"
 
-using namespace rest_rpc;
+using namespace rpc;
+
+static uint16_t port = 9000;
 
 void test_add() {
     try {
         boost::asio::io_service io_service;
         test_client client(io_service);
-        client.connect("127.0.0.1", "9000");
+        client.connect("127.0.0.1", port);
 
         auto result = client.call<int>("add", 1, 2);
 
@@ -22,7 +24,7 @@ void test_translate() {
     try {
         boost::asio::io_service io_service;
         test_client client(io_service);
-        client.connect("127.0.0.1", "9000");
+        client.connect("127.0.0.1", port);
 
         auto result = client.call<std::string>("translate", "hello");
         std::cout << result << std::endl;
@@ -36,7 +38,7 @@ void test_hello() {
     try {
         boost::asio::io_service io_service;
         test_client client(io_service);
-        client.connect("127.0.0.1", "9000");
+        client.connect("127.0.0.1", port);
 
         client.call("hello", "purecpp");
     }

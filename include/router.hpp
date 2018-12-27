@@ -22,25 +22,15 @@ public:
     }
 
     template<execute_mode model, typename Function>
-    void register_handler(const std::string & name, Function f)
+    void route(const std::string & name, Function f)
     {
         return register_nonmember_func<model>(name, std::move(f));
     }
 
     template<execute_mode model, typename Function, typename Self>
-    void register_handler(const std::string & name, const Function & f, Self * self)
+    void route(const std::string & name, const Function & f, Self * self)
     {
         return register_member_func<model>(name, f, self);
-    }
-
-    void remove_handler(const std::string & name)
-    {
-        this->map_invokers_.erase(name);
-    }
-
-    void set_callback(const std::function<void(const std::string &, const std::string &, connection *, bool)> & callback)
-    {
-        callback_to_server_ = callback;
     }
 
     template<typename T>
@@ -70,6 +60,17 @@ public:
             callback_to_server_("", result, conn, true);
         }
     }
+
+    void unroute(const std::string & name)
+    {
+        this->map_invokers_.erase(name);
+    }
+
+    void set_callback(const std::function<void(const std::string &, const std::string &, connection *, bool)> & callback)
+    {
+        callback_to_server_ = callback;
+    }
+
 
     router() = default;
 

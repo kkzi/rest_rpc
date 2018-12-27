@@ -7,7 +7,7 @@
 #include "meta_util.hpp"
 
 using boost::asio::ip::tcp;
-using namespace rest_rpc;
+using namespace rpc;
 
 class test_client : private boost::noncopyable
 {
@@ -19,10 +19,10 @@ public:
 
     }
 
-    void connect(const std::string& addr, const std::string& port)
+    void connect(const std::string& addr, uint16_t port)
     {
         tcp::resolver resolver(io_service_);
-        tcp::resolver::query query(tcp::v4(), addr, port);
+        tcp::resolver::query query(tcp::v4(), addr, std::to_string(port));
         tcp::resolver::iterator endpoint_iterator = resolver.resolve(query);
 
         boost::asio::connect(socket_, endpoint_iterator);

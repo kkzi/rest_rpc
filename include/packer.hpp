@@ -5,41 +5,42 @@
 
 
 namespace rpc {
-namespace packer
+struct packer
 {
 
 
-template<typename ... Args>
-std::string request(const std::string & url, Args && ... args)
-{
-    return json{
-        {"url", url},
-        {"arguments", std::make_tuple(std::forward<Args>(args)...)},
-    }.dump();
-}
+    template<typename ... Args>
+    static std::string request(const std::string & url, Args && ... args)
+    {
+        return json{
+            {"url", url},
+            {"arguments", std::make_tuple(std::forward<Args>(args)...)},
+        }.dump();
+    }
 
-template<typename T>
-std::string response(result_code code, const std::string & message, const T & content)
-{
-    return json{ {"code", (int)code}, {"description", message}, {"content", content} }.dump();
-}
+    template<typename T>
+    static std::string response(result_code code, const std::string & message, const T & content)
+    {
+        return json{ {"code", (int)code}, {"description", message}, {"content", content} }.dump();
+    }
 
-std::string response(result_code code, const std::string & message)
-{
-    return json{ {"code", (int)code}, {"description", message} }.dump();
-}
+    static std::string response(result_code code, const std::string & message)
+    {
+        return json{ {"code", (int)code}, {"description", message} }.dump();
+    }
 
-template<typename T>
-std::string success(const T & content)
-{
-    return json{ {"code", result_code::OK}, {"content", content} }.dump();
-}
+    template<typename T>
+    static std::string success(const T & content)
+    {
+        return json{ {"code", result_code::OK}, {"content", content} }.dump();
+    }
 
-std::string success()
-{
-    return json{ {"code", result_code::OK} }.dump();
-}
+    static std::string success()
+    {
+        return json{ {"code", result_code::OK} }.dump();
+    }
 
 
-} // namespace packer
+};
+
 } // namespace rpc 

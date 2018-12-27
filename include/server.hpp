@@ -39,15 +39,15 @@ public:
     }
 
     template<execute_mode model = execute_mode::SYNC, typename Function>
-    void register_handler(std::string const & name, const Function & f)
+    void route(std::string const & name, const Function & f)
     {
-        router::get().register_handler<model>(name, f);
+        router::get().route<model>(name, f);
     }
 
     template<execute_mode model = execute_mode::SYNC, typename Function, typename Self>
-    void register_handler(std::string const & name, const Function & f, Self * self)
+    void route(std::string const & name, const Function & f, Self * self)
     {
-        router::get().register_handler<model>(name, f, self);
+        router::get().route<model>(name, f, self);
     }
 
     void response(int64_t conn_id, const char * data, size_t size)

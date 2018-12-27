@@ -26,9 +26,11 @@ int main()
     rpc::server server(9000, 4);
 
     dummy d;
-    server.register_handler("add", &dummy::add, &d);
-    server.register_handler("translate", translate);
-    server.register_handler("hello", hello);
+    server.route("add", &dummy::add, &d);
+    server.route("translate", translate);
+    server.route("hello", hello);
+
+    //server.register_handler("add2", [](int a, int b) ->int { return a + b; });
 
     server.run();
 
