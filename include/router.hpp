@@ -183,4 +183,4 @@ private:
     std::function<void(const std::string &, const std::string &, connection *, bool)> callback_to_server_;
 };
 
-} // namespace rest_rpc
+} // namespace rpc

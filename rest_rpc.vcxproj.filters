@@ -31,9 +31,6 @@
     <ClInclude Include="include\router.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\rpc_server.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="include\common.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -44,6 +41,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\io_context_pool.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\server.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

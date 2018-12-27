@@ -10,23 +10,23 @@ namespace rpc
 {
 using boost::asio::ip::tcp;
 
-class rpc_server final : private boost::noncopyable
+class server final : private boost::noncopyable
 {
 
 public:
-    rpc_server(short port, size_t size, size_t timeout_seconds = 15, size_t check_seconds = 10)
+    server(uint16_t port, size_t size, size_t timeout_seconds = 15, size_t check_seconds = 10)
         : io_pool_(size)
         , acceptor_(io_pool_.get_io_service(), tcp::endpoint(tcp::v4(), port))
         , timeout_seconds_(timeout_seconds)
         , check_seconds_(check_seconds)
     {
         using namespace std::placeholders;
-        router::get().set_callback(std::bind(&rpc_server::callback, this, _1, _2, _3, _4));
+        router::get().set_callback(std::bind(&server::callback, this, _1, _2, _3, _4));
         do_accept();
-        check_thread_ = std::make_shared<std::thread>(std::bind(&rpc_server::clean, this));
+        check_thread_ = std::make_shared<std::thread>(std::bind(&server::clean, this));
     }
 
-    ~rpc_server()
+    ~server()
     {
         io_pool_.stop();
         thd_->join();
@@ -113,4 +113,4 @@ private:
     size_t check_seconds_;
 };
 
-}  // namespace rest_rpc
+} // namespace rpc

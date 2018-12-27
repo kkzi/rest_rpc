@@ -69,4 +69,4 @@ private:
     std::size_t io_cursor_;
 };
 
-}  // namespace rest_rpc
+}  // namespace rpc

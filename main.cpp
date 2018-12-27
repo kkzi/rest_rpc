@@ -1,12 +1,14 @@
-#include "rpc_server.hpp"
+#include "server.hpp"
 
 using namespace rpc;
 
-struct dummy {
+struct dummy
+{
     int add(connection* conn, int a, int b) { return a + b; }
 };
 
-std::string translate(connection* conn, const std::string& orignal) {
+std::string translate(connection* conn, const std::string& orignal)
+{
     std::string temp = orignal;
     for (auto& c : temp) {
         c = std::toupper(c);
@@ -14,12 +16,14 @@ std::string translate(connection* conn, const std::string& orignal) {
     return temp;
 }
 
-void hello(connection* conn, const std::string& str) {
+void hello(connection* conn, const std::string& str)
+{
     std::cout << "hello " << str << std::endl;
 }
 
-int main() {
-    rpc_server server(9000, 4);
+int main()
+{
+    rpc::server server(9000, 4);
 
     dummy d;
     server.register_handler("add", &dummy::add, &d);

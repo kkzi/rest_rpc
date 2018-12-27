@@ -177,5 +177,5 @@ private:
     std::atomic_bool has_closed_;
 };
 
-}  // namespace rest_rpc
+}  // namespace rpc
 
