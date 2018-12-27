@@ -7,7 +7,7 @@
 #include "meta_util.hpp"
 #include "json/json_util.h"
 
-namespace rest_rpc {
+namespace rpc {
 
 enum class execute_mode { SYNC, ASYNC };
 class connection;

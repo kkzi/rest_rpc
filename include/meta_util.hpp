@@ -2,7 +2,7 @@
 
 #include "cplusplus_14.hpp"
 
-namespace rest_rpc {
+namespace rpc {
 
 //template <typename... Args, typename Func, std::size_t... Idx>
 //void for_each(const std::tuple<Args...>& t, Func&& f, std::index_sequence<Idx...>) 

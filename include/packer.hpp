@@ -4,7 +4,7 @@
 #include "common.hpp"
 
 
-namespace rest_rpc {
+namespace rpc {
 namespace packer
 {
 

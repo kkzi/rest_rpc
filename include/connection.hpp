@@ -9,7 +9,7 @@
 
 using boost::asio::ip::tcp;
 
-namespace rest_rpc
+namespace rpc
 {
 
 class connection final : public std::enable_shared_from_this<connection>, private boost::noncopyable

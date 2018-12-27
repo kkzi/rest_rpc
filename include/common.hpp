@@ -5,7 +5,7 @@
 #include <cstdint>
 
 
-namespace rest_rpc
+namespace rpc
 {
 
 enum class result_code : int16_t

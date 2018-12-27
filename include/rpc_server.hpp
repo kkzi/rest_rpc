@@ -6,7 +6,7 @@
 #include "router.hpp"
 
 
-namespace rest_rpc
+namespace rpc
 {
 using boost::asio::ip::tcp;
 
