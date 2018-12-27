@@ -21,20 +21,20 @@ public:
         return instance;
     }
 
-    template<execute_mode model, typename Function>
+    template<execute_mode mode, typename Function>
     void route(const std::string & name, Function f)
     {
-        return register_nonmember_func<model>(name, std::move(f));
+        return register_nonmember_func<mode>(name, std::move(f));
     }
 
-    template<execute_mode model, typename Function, typename Self>
+    template<execute_mode mode, typename Function, typename Self>
     void route(const std::string & name, const Function & f, Self * self)
     {
-        return register_member_func<model>(name, f, self);
+        return register_member_func<mode>(name, f, self);
     }
 
     template<typename T>
-    void route(const std::string & data, T conn)
+    void execute_function(const std::string & data, T conn)
     {
         std::string result;
         try {
@@ -49,9 +49,9 @@ public:
             }
 
             const auto & args = json_util::get(req, "arguments", json::array());
-            execute_mode model;
-            it->second(conn, args, result, model);
-            if (model == execute_mode::SYNC && callback_to_server_) {
+            execute_mode mode;
+            it->second(conn, args, result, mode);
+            if (mode == execute_mode::SYNC && callback_to_server_) {
                 callback_to_server_(url, result, conn, false);
             }
         }
@@ -128,16 +128,16 @@ private:
     template<typename Function, execute_mode mode = execute_mode::SYNC>
     struct invoker
     {
-        template<execute_mode model>
-        static inline void apply(const Function & func, connection * conn, const json & args, std::string & result, execute_mode & exe_model)
+        template<execute_mode mode>
+        static inline void apply(const Function & func, connection * conn, const json & args, std::string & result, execute_mode & exe_mode)
         {
             using args_tuple = typename function_traits<Function>::args_tuple_t;
 
-            exe_model = execute_mode::SYNC;
+            exe_mode = execute_mode::SYNC;
             try {
                 auto tp = args.get<args_tuple>();
                 call(func, conn, result, tp);
-                exe_model = model;
+                exe_mode = mode;
             }
             catch (std::invalid_argument & e) {
                 result = packer::response(result_code::FAIL, e.what());
@@ -147,15 +147,15 @@ private:
             }
         }
 
-        template<execute_mode model, typename Self>
-        static inline void apply_member(const Function & func, Self * self, connection * conn, const json & args, std::string & result, execute_mode & exe_model)
+        template<execute_mode mode, typename Self>
+        static inline void apply_member(const Function & func, Self * self, connection * conn, const json & args, std::string & result, execute_mode & exe_mode)
         {
             using args_tuple = typename function_traits<Function>::args_tuple_t;
-            exe_model = execute_mode::SYNC;
+            exe_mode = execute_mode::SYNC;
             try {
                 auto tp = args.get<args_tuple>();
                 call_member(func, self, conn, result, tp);
-                exe_model = model;
+                exe_mode = mode;
             }
             //catch (std::invalid_argument & e) {
             // result = packer::response(result_code::FAIL, e.what());
@@ -166,21 +166,21 @@ private:
         }
     };
 
-    template<execute_mode model, typename Function>
+    template<execute_mode mode, typename Function>
     void register_nonmember_func(const std::string & name, Function f)
     {
         using namespace std::placeholders;
-        this->map_invokers_[name] = { std::bind(&invoker<Function>::template apply<model>, std::move(f), _1, _2, _3, _4) };
+        this->map_invokers_[name] = { std::bind(&invoker<Function>::template apply<mode>, std::move(f), _1, _2, _3, _4) };
     }
 
-    template<execute_mode model, typename Function, typename Self>
+    template<execute_mode mode, typename Function, typename Self>
     void register_member_func(const std::string & name, const Function & f, Self * self)
     {
         using namespace std::placeholders;
-        this->map_invokers_[name] = { std::bind(&invoker<Function>::template apply_member<model, Self>, f, self, _1, _2, _3, _4) };
+        this->map_invokers_[name] = { std::bind(&invoker<Function>::template apply_member<mode, Self>, f, self, _1, _2, _3, _4) };
     }
 
-    std::map<std::string, std::function<void(connection *, const json & arguments, std::string & reply, execute_mode & model)>> map_invokers_;
+    std::map<std::string, std::function<void(connection *, const json & arguments, std::string & reply, execute_mode & mode)>> map_invokers_;
     std::function<void(const std::string &, const std::string &, connection *, bool)> callback_to_server_;
 };
 
