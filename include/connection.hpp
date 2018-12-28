@@ -125,7 +125,7 @@ private:
 
             if (!ec) {
                 std::string data(data_.begin(), data_.end());
-                router::get().route(data, this);
+                router::get().execute_function(data, this);
             }
             else {
                 //LOG(INFO) << ec.message();

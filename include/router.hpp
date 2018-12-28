@@ -80,48 +80,48 @@ private:
 
     template<typename F, size_t... idx, typename... Args>
     static typename std::result_of<F(connection *, Args...)>::type
-        call_helper(const F & f, const std::index_sequence<idx...> &, const std::tuple<Args...> & tup, connection * ptr)
+        call_helper(const F & f, const std::index_sequence<idx...> &, const std::tuple<Args...> & tup, connection * conn)
     {
-        return f(ptr, std::get<idx>(tup)...);
+        return f(conn, std::get<idx>(tup)...);
     }
 
     template<typename F, typename... Args>
     static typename std::enable_if<std::is_void<typename std::result_of<F(connection *, Args...)>::type>::value>::type
-        call(const F & f, connection * ptr, std::string & result, std::tuple<Args...> & tp)
+        call(const F & f, connection * conn, std::string & result, std::tuple<Args...> & tp)
     {
-        call_helper(f, std::make_index_sequence<sizeof...(Args)>{}, tp, ptr);
+        call_helper(f, std::make_index_sequence<sizeof...(Args)>{}, tp, conn);
         result = packer::success();
     }
 
     template<typename F, typename... Args>
     static typename std::enable_if<!std::is_void<typename std::result_of<F(connection *, Args...)>::type>::value>::type
-        call(const F & f, connection * ptr, std::string & result, const std::tuple<Args...> & tp)
+        call(const F & f, connection * conn, std::string & result, const std::tuple<Args...> & tp)
     {
-        auto r = call_helper(f, std::make_index_sequence<sizeof...(Args)>{}, tp, ptr);
+        auto r = call_helper(f, std::make_index_sequence<sizeof...(Args)>{}, tp, conn);
         result = packer::success(r);
     }
 
     template<typename F, typename Self, size_t... idx, typename... Args>
     static typename std::result_of<F(Self, connection *, Args...)>::type call_member_helper(
         const F & f, Self * self, const std::index_sequence<idx...> &,
-        const std::tuple<Args...> & tup, connection * ptr = 0)
+        const std::tuple<Args...> & tup, connection * conn = 0)
     {
-        return (*self.*f)(ptr, std::get<idx>(tup)...);
+        return (*self.*f)(conn, std::get<idx>(tup)...);
     }
 
     template<typename F, typename Self, typename... Args>
     static typename std::enable_if<std::is_void<typename std::result_of<F(Self, connection *, Args...)>::type>::value>::type
-        call_member(const F & f, Self * self, connection * ptr, std::string & result, const std::tuple<Args...> & tp)
+        call_member(const F & f, Self * self, connection * conn, std::string & result, const std::tuple<Args...> & tp)
     {
-        call_member_helper(f, self, typename std::make_index_sequence<sizeof...(Args)>{}, tp, ptr);
+        call_member_helper(f, self, typename std::make_index_sequence<sizeof...(Args)>{}, tp, conn);
         result = packer::success();
     }
 
     template<typename F, typename Self, typename... Args>
     static typename std::enable_if<!std::is_void<typename std::result_of<F(Self, connection *, Args...)>::type>::value>::type
-        call_member(const F & f, Self * self, connection * ptr, std::string & result, const std::tuple<Args...> & tp)
+        call_member(const F & f, Self * self, connection * conn, std::string & result, const std::tuple<Args...> & tp)
     {
-        auto r = call_member_helper(f, self, typename std::make_index_sequence<sizeof...(Args)>{}, tp, ptr);
+        auto r = call_member_helper(f, self, typename std::make_index_sequence<sizeof...(Args)>{}, tp, conn);
         result = packer::success(r);
     }
 
