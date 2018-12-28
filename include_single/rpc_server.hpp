@@ -630,11 +630,10 @@ private:
 };
 
 
-
-
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
 #include <boost/beast/version.hpp>
+#include <boost/asio/io_context.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/spawn.hpp>
 #include <boost/algorithm/string/predicate.hpp>
@@ -647,8 +646,9 @@ private:
 #include <vector>
 #include <map>
 
+
 using tcp = boost::asio::ip::tcp;                // from <boost/asio/ip/tcp.hpp>
-using string_view = boost::beast::string_view;   //from <boost/beast/core/string.hpp>
+using string_view = boost::beast::string_view;   // from <boost/beast/core/string.hpp>
 namespace http = boost::beast::http;             // from <boost/beast/http.hpp>
 
 class http_server
@@ -657,38 +657,26 @@ public:
     using hook_function_t = std::function<http::response<http::string_body>(const http::request<http::string_body> &)>;
 
 public:
-    // Accepts incoming connections and launches the sessions
-    static void do_listen(boost::asio::io_context& ioc, tcp::endpoint endpoint, std::string const& doc_root, boost::asio::yield_context yield)
+    http_server(boost::asio::io_context & io, uint16_t port, const string_view www_root = "./")
+        : io_(io)
+        , acceptor_(io, tcp::endpoint(tcp::v4(), port))
+        , www_root_(www_root)
     {
-        boost::system::error_code ec;
 
-        // Open the acceptor
-        tcp::acceptor acceptor(ioc);
-        acceptor.open(endpoint.protocol(), ec);
-        if (ec) return fail(ec, "open");
+    }
 
-        // Bind to the server address
-        acceptor.bind(endpoint, ec);
-        if (ec) return fail(ec, "bind");
-
-        // Start listening for connections
-        acceptor.listen(boost::asio::socket_base::max_listen_connections, ec);
-        if (ec) return fail(ec, "listen");
-
-        for (;;) {
-            tcp::socket socket(ioc);
-            acceptor.async_accept(socket, yield[ec]);
-            if (ec) {
-                fail(ec, "accept");
-            }
-            else {
-                boost::asio::spawn(acceptor.get_executor().context(), std::bind(&do_session, std::move(socket), doc_root, std::placeholders::_1));
-            }
+public:
+    // Accepts incoming connections and launches the sessions
+    void start()
+    {
+        if (!acceptor_.is_open()) {
+            throw std::runtime_error("listen failed.");
         }
+        boost::asio::spawn(acceptor_.get_executor().context(), std::bind(&rpc::http_server::do_start, this, std::placeholders::_1));
     }
 
     // Register a hook function to handle custom requests
-    static void hook(http::verb method, const string_view & target, hook_function_t func)
+    void hook(http::verb method, const string_view & target, hook_function_t func)
     {
         assert(func != nullptr);
         if (hook_functions_.count(method) == 0) {
@@ -740,8 +728,23 @@ private:
         return result;
     }
 
+    void do_start(boost::asio::yield_context yield)
+    {
+        boost::system::error_code ec;
+        tcp::socket socket(io_);
+        for (;;) {
+            acceptor_.async_accept(socket, yield[ec]);
+            if (ec) {
+                fail(ec, "accept");
+            }
+            else {
+                boost::asio::spawn(acceptor_.get_executor().context(), std::bind(&rpc::http_server::do_session, this, std::ref(socket), std::placeholders::_1));
+            }
+        }
+    }
+
     template<class Body, class Allocator, class Send>
-    static void handle_request(boost::beast::string_view doc_root, http::request<Body, http::basic_fields<Allocator>>&& req, Send&& send)
+    void handle_request(http::request<Body, http::basic_fields<Allocator>>&& req, Send&& send)
     {
         // Returns a bad request response
         auto const bad_request = [&req](boost::beast::string_view why) {
@@ -800,7 +803,7 @@ private:
         }
 
         // Build the path to the requested file
-        std::string path = path_cat(doc_root, target);
+        std::string path = path_cat(www_root_, target);
         if (target.back() == '/') path.append("index.html");
 
         // Attempt to open the file
@@ -869,7 +872,7 @@ private:
     };
 
     // Handles an HTTP server connection
-    static void do_session(tcp::socket& socket, std::string const& doc_root, boost::asio::yield_context yield)
+    void do_session(tcp::socket & socket, boost::asio::yield_context yield)
     {
         bool close = false;
         boost::system::error_code ec;
@@ -884,15 +887,15 @@ private:
             // Read a request
             http::request<http::string_body> req;
             http::async_read(socket, buffer, req, yield[ec]);
-            if (ec == http::error::end_of_stream)
+            if (ec == http::error::end_of_stream) {
                 break;
-            if (ec)
-                return fail(ec, "read");
+            }
+
+            if (ec) return fail(ec, "read");
 
             // Send the response
-            handle_request(doc_root, std::move(req), lambda);
-            if (ec)
-                return fail(ec, "write");
+            handle_request(std::move(req), lambda);
+            if (ec) return fail(ec, "write");
 
             if (close) {
                 // This means we should close the connection, usually because
@@ -908,11 +911,12 @@ private:
     }
 
 private:
-    static std::map<http::verb, std::map<string_view, hook_function_t>> hook_functions_;
+    boost::asio::io_context & io_;
+    tcp::acceptor acceptor_;
+    string_view www_root_;
+    std::map<http::verb, std::map<string_view, hook_function_t>> hook_functions_;
 
 }; // class http_server
-
-std::map<http::verb, std::map<string_view, http_server::hook_function_t>> http_server::hook_functions_;
 
 
 }  // namespace rpc
