@@ -6,7 +6,8 @@
 #include "packer.hpp"
 #include "json/json_util.h"
 
-namespace rpc {
+namespace rpc
+{
 
 enum class execute_mode { SYNC, ASYNC };
 class connection;

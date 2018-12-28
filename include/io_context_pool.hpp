@@ -5,7 +5,8 @@
 #include <boost/asio.hpp>
 #include <boost/noncopyable.hpp>
 
-namespace rpc {
+namespace rpc
+{
 
 class io_context_pool final : private boost::noncopyable
 {
