@@ -17,7 +17,6 @@ class connection final : public std::enable_shared_from_this<connection>, privat
 public:
     connection(boost::asio::io_service& io_service, std::size_t timeout_seconds)
         : socket_(io_service)
-        , strand_(io_service)
         , data_(PAGE_SIZE)
         , message_{ boost::asio::buffer(head_), boost::asio::buffer(data_.data(), data_.size()) }
         , timer_(io_service)
@@ -167,7 +166,6 @@ private:
     }
 
     tcp::socket socket_;
-    boost::asio::io_service::strand strand_;
     char head_[HEAD_LEN];
     std::vector<char> data_;
     std::array<boost::asio::mutable_buffer, 2> message_;

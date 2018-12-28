@@ -62,18 +62,17 @@ public:
 private:
     void do_accept()
     {
-        conn_.reset(new connection(io_pool_.get_io_service(), timeout_seconds_));
-        acceptor_.async_accept(conn_->socket(), [this](boost::system::error_code ec) {
+        auto conn = std::make_shared<connection>(io_pool_.get_io_service(), timeout_seconds_);
+        acceptor_.async_accept(conn->socket(), [=](boost::system::error_code ec) {
             if (ec) {
                 //LOG(INFO) << "acceptor error: " << ec.message();
             }
             else {
-                conn_->start();
+                conn->start();
                 std::unique_lock<std::mutex> lock(mtx_);
-                conn_->set_conn_id(conn_id_);
-                connections_.emplace(conn_id_++, conn_);
+                conn->set_conn_id(conn_id_);
+                connections_.emplace(conn_id_++, conn);
             }
-
             do_accept();
         });
     }
@@ -102,7 +101,6 @@ private:
 
     io_context_pool io_pool_;
     tcp::acceptor acceptor_;
-    std::shared_ptr<connection> conn_;
     std::shared_ptr<std::thread> thd_;
     std::size_t timeout_seconds_;
 

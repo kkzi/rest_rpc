@@ -4,11 +4,11 @@
 #include "common.hpp"
 
 
-namespace rpc {
-struct packer
+namespace rpc 
 {
 
-
+struct packer
+{
     template<typename ... Args>
     static std::string request(const std::string & url, Args && ... args)
     {
