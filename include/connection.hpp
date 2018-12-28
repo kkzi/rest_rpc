@@ -46,11 +46,11 @@ public:
         return has_closed_;
     }
 
-    void response(const char* data, size_t len)
+    void response(std::string data)
     {
-        assert(message_[1].size() >= len);
-        message_[0] = boost::asio::buffer(&len, sizeof(int32_t));
-        message_[1] = boost::asio::buffer((char*)data, len);
+        int len = sizeof(int32_t);
+        message_[0] = boost::asio::buffer(&len, len);
+        message_[1] = boost::asio::buffer(data);
         reset_timer();
         auto self = this->shared_from_this();
         boost::asio::async_write(socket_, message_, [this, self](boost::system::error_code ec, std::size_t length) {

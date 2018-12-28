@@ -374,11 +374,11 @@ public:
         return has_closed_;
     }
 
-    void response(const char* data, size_t len)
+    void response(std::string data)
     {
-        assert(message_[1].size() >= len);
-        message_[0] = boost::asio::buffer(&len, sizeof(int32_t));
-        message_[1] = boost::asio::buffer((char*)data, len);
+        auto len = sizeof(uint32_t);
+        message_[0] = boost::asio::buffer(&len, len);
+        message_[1] = boost::asio::buffer(data);
         reset_timer();
         auto self = this->shared_from_this();
         boost::asio::async_write(socket_, message_, [this, self](boost::system::error_code ec, std::size_t length) {
@@ -545,12 +545,12 @@ public:
         router::get().route<model>(name, f, self);
     }
 
-    void response(int64_t conn_id, const char * data, size_t size)
+    void response(int64_t conn_id, const std::string & result)
     {
         std::unique_lock<std::mutex> lock(mtx_);
         auto it = connections_.find(conn_id);
         if (it != connections_.end()) {
-            it->second->response(data, size);
+            it->second->response(result);
         }
     }
 
@@ -592,7 +592,7 @@ private:
 
     void callback(const std::string & topic, const std::string & result, connection * conn, bool has_error = false)
     {
-        response(conn->conn_id(), result.data(), result.size());
+        response(conn->conn_id(), result);
     }
 
     io_context_pool io_pool_;
