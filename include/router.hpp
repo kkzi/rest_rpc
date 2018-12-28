@@ -54,12 +54,12 @@ public:
     void route(const std::string & name, Function func)
     {
         using namespace std::placeholders;
-        map_invokers_[name] = [=](connection * conn, const json & arguments, std::string & reply, execute_mode & exe_mode) {
+        map_invokers_[name] = [=](const json & arguments, std::string & reply, execute_mode & exe_mode) {
             using args_tuple = typename function_traits<Function>::args_tuple_t;
             exe_mode = execute_mode::SYNC;
             try {
                 auto tp = arguments.get<args_tuple>();
-                call(func, conn, reply, tp);
+                call(func, reply, tp);
                 exe_mode = mode;
             }
             catch (const std::exception & e) {
@@ -72,12 +72,12 @@ public:
     void route(const std::string & name, const Function & func, Self * self)
     {
         using namespace std::placeholders;
-        map_invokers_[name] = [=](connection * conn, const json & args, std::string & reply, execute_mode & exe_mode) {
+        map_invokers_[name] = [=](const json & args, std::string & reply, execute_mode & exe_mode) {
             using args_tuple = typename function_traits<Function>::args_tuple_t;
             exe_mode = execute_mode::SYNC;
             try {
                 auto tp = args.get<args_tuple>();
-                call_member(func, self, conn, reply, tp);
+                call_member(func, self, reply, tp);
                 exe_mode = mode;
             }
             catch (const std::exception & e) {
@@ -103,7 +103,7 @@ public:
 
             const auto & args = json_util::get(req, "arguments", json::array());
             execute_mode mode;
-            it->second(conn, args, result, mode);
+            it->second(args, result, mode);
             if (mode == execute_mode::SYNC && callback_to_server_) {
                 callback_to_server_(url, result, conn, false);
             }
@@ -111,6 +111,28 @@ public:
         catch (const std::exception & ex) {
             result = packer::response(result_code::FAIL, ex.what());
             callback_to_server_("", result, conn, true);
+        }
+    }
+
+    std::string execute_function(const std::string & data)
+    {
+        try {
+            const auto & req = json::parse(data);
+            const auto & url = json_util::get<std::string>(req, "url", "");
+
+            auto it = map_invokers_.find(url);
+            if (it == map_invokers_.end()) {
+                return packer::response(result_code::FAIL, "unknown request: " + url);
+            }
+
+            const auto & args = json_util::get(req, "arguments", json::array());
+            execute_mode mode;
+            std::string result;
+            it->second(args, result, mode);
+            return result;
+        }
+        catch (const std::exception & e) {
+            return packer::response(result_code::FAIL, e.what());
         }
     }
 
@@ -133,54 +155,54 @@ private:
 
     template<typename F, size_t... idx, typename... Args>
     static typename std::result_of<F(Args...)>::type
-        call_helper(const F & f, const std::index_sequence<idx...> &, const std::tuple<Args...> & tup, connection * conn)
+        call_helper(const F & f, const std::index_sequence<idx...> &, const std::tuple<Args...> & tup)
     {
         return f(std::get<idx>(tup)...);
     }
 
     template<typename F, typename... Args>
     static typename std::enable_if<std::is_void<typename std::result_of<F(Args...)>::type>::value>::type
-        call(const F & f, connection * conn, std::string & result, std::tuple<Args...> & tp)
+        call(const F & f, std::string & result, std::tuple<Args...> & tp)
     {
-        call_helper(f, std::make_index_sequence<sizeof...(Args)>{}, tp, conn);
+        call_helper(f, std::make_index_sequence<sizeof...(Args)>{}, tp);
         result = packer::success();
     }
 
     template<typename F, typename... Args>
     static typename std::enable_if<!std::is_void<typename std::result_of<F(Args...)>::type>::value>::type
-        call(const F & f, connection * conn, std::string & result, const std::tuple<Args...> & tp)
+        call(const F & f, std::string & result, const std::tuple<Args...> & tp)
     {
-        auto r = call_helper(f, std::make_index_sequence<sizeof...(Args)>{}, tp, conn);
+        auto r = call_helper(f, std::make_index_sequence<sizeof...(Args)>{}, tp);
         result = packer::success(r);
     }
 
     template<typename F, typename Self, size_t... idx, typename... Args>
     static typename std::result_of<F(Self, Args...)>::type call_member_helper(
         const F & f, Self * self, const std::index_sequence<idx...> &,
-        const std::tuple<Args...> & tup, connection * conn = 0)
+        const std::tuple<Args...> & tup)
     {
         return (*self.*f)(std::get<idx>(tup)...);
     }
 
     template<typename F, typename Self, typename... Args>
     static typename std::enable_if<std::is_void<typename std::result_of<F(Self, Args...)>::type>::value>::type
-        call_member(const F & f, Self * self, connection * conn, std::string & result, const std::tuple<Args...> & tp)
+        call_member(const F & f, Self * self, std::string & result, const std::tuple<Args...> & tp)
     {
-        call_member_helper(f, self, typename std::make_index_sequence<sizeof...(Args)>{}, tp, conn);
+        call_member_helper(f, self, typename std::make_index_sequence<sizeof...(Args)>{}, tp);
         result = packer::success();
     }
 
     template<typename F, typename Self, typename... Args>
     static typename std::enable_if<!std::is_void<typename std::result_of<F(Self, Args...)>::type>::value>::type
-        call_member(const F & f, Self * self, connection * conn, std::string & result, const std::tuple<Args...> & tp)
+        call_member(const F & f, Self * self, std::string & result, const std::tuple<Args...> & tp)
     {
-        auto r = call_member_helper(f, self, typename std::make_index_sequence<sizeof...(Args)>{}, tp, conn);
+        auto r = call_member_helper(f, self, typename std::make_index_sequence<sizeof...(Args)>{}, tp);
         result = packer::success(r);
     }
 
 
 private:
-    std::map<std::string, std::function<void(connection *, const json & args, std::string & reply, execute_mode & mode)>> map_invokers_;
+    std::map<std::string, std::function<void(const json & args, std::string & reply, execute_mode & mode)>> map_invokers_;
     std::function<void(const std::string &, const std::string &, connection *, bool)> callback_to_server_;
 };
 
