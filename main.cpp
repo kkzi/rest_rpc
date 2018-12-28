@@ -4,10 +4,10 @@ using namespace rpc;
 
 struct dummy
 {
-    int add(connection* conn, int a, int b) { return a + b; }
+    int add(int a, int b) { return a + b; }
 };
 
-std::string translate(connection* conn, const std::string& orignal)
+std::string translate(const std::string& orignal)
 {
     std::string temp = orignal;
     for (auto& c : temp) {
@@ -16,7 +16,12 @@ std::string translate(connection* conn, const std::string& orignal)
     return temp;
 }
 
-void hello(connection* conn, const std::string& str)
+void hello(const std::string& str)
+{
+    std::cout << "hello " << str << std::endl;
+}
+
+void test(const std::string& str)
 {
     std::cout << "hello " << str << std::endl;
 }
@@ -28,9 +33,11 @@ int main()
     dummy d;
     server.route("add", &dummy::add, &d);
     server.route("translate", translate);
-    server.route("hello", hello);
+    server.route("hello", test);
 
-    //server.register_handler("add2", [](int a, int b) ->int { return a + b; });
+    server.route("test", test);
+
+    //server.route("add2", [](int a, int b) ->int { return a + b; });
 
     server.run();
 

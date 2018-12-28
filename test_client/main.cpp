@@ -40,7 +40,8 @@ void test_hello() {
         test_client client(io_service);
         client.connect("127.0.0.1", port);
 
-        client.call("hello", "purecpp");
+        //client.call("hello", "purecpp");
+        client.call("test", "purecpp");
     }
     catch (const std::exception& e) {
         std::cout << e.what() << std::endl;

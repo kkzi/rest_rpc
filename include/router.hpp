@@ -4,13 +4,41 @@
 #include <boost/asio.hpp>
 #include "common.hpp"
 #include "packer.hpp"
-#include "meta_util.hpp"
 #include "json/json_util.h"
 
 namespace rpc {
 
 enum class execute_mode { SYNC, ASYNC };
 class connection;
+
+
+
+template<typename T>
+struct function_traits;
+
+template<typename Ret, typename... Args>
+struct function_traits<Ret(Args...)>
+{
+public:
+    using args_tuple_t = std::tuple<std::remove_const_t<std::remove_reference_t<Args>>...>;
+};
+
+template<typename Ret, typename... Args>
+struct function_traits<Ret(*)(Args...)> : function_traits<Ret(Args...)> {};
+
+template <typename Ret, typename... Args>
+struct function_traits<std::function<Ret(Args...)>> : function_traits<Ret(Args...)> {};
+
+template <typename ReturnType, typename ClassType, typename... Args>
+struct function_traits<ReturnType(ClassType::*)(Args...)> : function_traits<ReturnType(Args...)> {};
+
+template <typename ReturnType, typename ClassType, typename... Args>
+struct function_traits<ReturnType(ClassType::*)(Args...) const> : function_traits<ReturnType(Args...)> {};
+
+template<typename Callable>
+struct function_traits : function_traits<decltype(&Callable::operator())> {};
+
+
 
 class router : boost::noncopyable
 {
@@ -103,14 +131,14 @@ private:
     router(router &&) = delete;
 
     template<typename F, size_t... idx, typename... Args>
-    static typename std::result_of<F(connection *, Args...)>::type
+    static typename std::result_of<F(Args...)>::type
         call_helper(const F & f, const std::index_sequence<idx...> &, const std::tuple<Args...> & tup, connection * conn)
     {
-        return f(conn, std::get<idx>(tup)...);
+        return f(std::get<idx>(tup)...);
     }
 
     template<typename F, typename... Args>
-    static typename std::enable_if<std::is_void<typename std::result_of<F(connection *, Args...)>::type>::value>::type
+    static typename std::enable_if<std::is_void<typename std::result_of<F(Args...)>::type>::value>::type
         call(const F & f, connection * conn, std::string & result, std::tuple<Args...> & tp)
     {
         call_helper(f, std::make_index_sequence<sizeof...(Args)>{}, tp, conn);
@@ -118,7 +146,7 @@ private:
     }
 
     template<typename F, typename... Args>
-    static typename std::enable_if<!std::is_void<typename std::result_of<F(connection *, Args...)>::type>::value>::type
+    static typename std::enable_if<!std::is_void<typename std::result_of<F(Args...)>::type>::value>::type
         call(const F & f, connection * conn, std::string & result, const std::tuple<Args...> & tp)
     {
         auto r = call_helper(f, std::make_index_sequence<sizeof...(Args)>{}, tp, conn);
@@ -126,15 +154,15 @@ private:
     }
 
     template<typename F, typename Self, size_t... idx, typename... Args>
-    static typename std::result_of<F(Self, connection *, Args...)>::type call_member_helper(
+    static typename std::result_of<F(Self, Args...)>::type call_member_helper(
         const F & f, Self * self, const std::index_sequence<idx...> &,
         const std::tuple<Args...> & tup, connection * conn = 0)
     {
-        return (*self.*f)(conn, std::get<idx>(tup)...);
+        return (*self.*f)(std::get<idx>(tup)...);
     }
 
     template<typename F, typename Self, typename... Args>
-    static typename std::enable_if<std::is_void<typename std::result_of<F(Self, connection *, Args...)>::type>::value>::type
+    static typename std::enable_if<std::is_void<typename std::result_of<F(Self, Args...)>::type>::value>::type
         call_member(const F & f, Self * self, connection * conn, std::string & result, const std::tuple<Args...> & tp)
     {
         call_member_helper(f, self, typename std::make_index_sequence<sizeof...(Args)>{}, tp, conn);
@@ -142,7 +170,7 @@ private:
     }
 
     template<typename F, typename Self, typename... Args>
-    static typename std::enable_if<!std::is_void<typename std::result_of<F(Self, connection *, Args...)>::type>::value>::type
+    static typename std::enable_if<!std::is_void<typename std::result_of<F(Self, Args...)>::type>::value>::type
         call_member(const F & f, Self * self, connection * conn, std::string & result, const std::tuple<Args...> & tp)
     {
         auto r = call_member_helper(f, self, typename std::make_index_sequence<sizeof...(Args)>{}, tp, conn);

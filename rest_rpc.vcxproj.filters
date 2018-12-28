@@ -22,9 +22,6 @@
     <ClInclude Include="include\cplusplus_14.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\meta_util.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="include\packer.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
