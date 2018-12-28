@@ -5,12 +5,15 @@
 #include <boost/asio.hpp>
 #include <json/json_util.h>
 
+
+namespace rpc
+{
 using boost::asio::ip::tcp;
 
-class test_client : private boost::noncopyable
+class client : private boost::noncopyable
 {
 public:
-    test_client(boost::asio::io_service& io_service)
+    client(boost::asio::io_service& io_service)
         : io_service_(io_service)
         , socket_(io_service)
     {
@@ -90,3 +93,4 @@ private:
     tcp::socket socket_;
 };
 
+} // namespace rpc
