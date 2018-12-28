@@ -1,56 +1,23 @@
 #include <iostream>
 #include "test_client.hpp"
 
-using namespace rpc;
+int main()
+{
+    boost::asio::io_service io_service;
+    test_client client(io_service);
+    client.connect("127.0.0.1", 9000);
 
-static uint16_t port = 9000;
-
-void test_add() {
     try {
-        boost::asio::io_service io_service;
-        test_client client(io_service);
-        client.connect("127.0.0.1", port);
+        client.call<void>("test", "purecpp");
 
-        auto result = client.call<int>("add", 1, 2);
+        auto sum = client.call<int>("add", 1, 2);
+        std::cout << sum << std::endl;
 
-        std::cout << result << std::endl;
+        auto text = client.call<std::string>("translate", "hello");
+        std::cout << text << std::endl;
     }
-    catch (const std::exception& e) {
+    catch (const std::exception & e) {
         std::cout << e.what() << std::endl;
     }
-}
-
-void test_translate() {
-    try {
-        boost::asio::io_service io_service;
-        test_client client(io_service);
-        client.connect("127.0.0.1", port);
-
-        auto result = client.call<std::string>("translate", "hello");
-        std::cout << result << std::endl;
-    }
-    catch (const std::exception& e) {
-        std::cout << e.what() << std::endl;
-    }
-}
-
-void test_hello() {
-    try {
-        boost::asio::io_service io_service;
-        test_client client(io_service);
-        client.connect("127.0.0.1", port);
-
-        //client.call("hello", "purecpp");
-        client.call("test", "purecpp");
-    }
-    catch (const std::exception& e) {
-        std::cout << e.what() << std::endl;
-    }
-}
-
-int main() {
-    test_hello();
-    test_add();
-    test_translate();
     return 0;
 }

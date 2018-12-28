@@ -1,13 +1,11 @@
 #pragma once
+
 #include <string>
 #include <iostream>
 #include <boost/asio.hpp>
 #include <json/json_util.h>
-#include "packer.hpp"
-#include "meta_util.hpp"
 
 using boost::asio::ip::tcp;
-using namespace rpc;
 
 class test_client : private boost::noncopyable
 {
@@ -24,7 +22,6 @@ public:
         tcp::resolver resolver(io_service_);
         tcp::resolver::query query(tcp::v4(), addr, std::to_string(port));
         tcp::resolver::iterator endpoint_iterator = resolver.resolve(query);
-
         boost::asio::connect(socket_, endpoint_iterator);
     }
 
@@ -44,27 +41,39 @@ public:
     }
 
     template<typename T = void, typename... Args>
-    typename std::enable_if<std::is_void<T>::value>::type call(std::string rpc_name, Args... args)
+    typename std::enable_if<std::is_void<T>::value>::type call(const std::string & rpc_name, Args... args)
     {
-        auto ret = packer::request(rpc_name, args...);
-        call(ret);
-        return;
+        auto req = pack_request(rpc_name, args...);
+        const auto & rep = json::parse(call(req));
+        auto ret_code = json_util::get<int>(rep, "code", 0);
+        if (ret_code != 0) {
+            throw std::runtime_error(json_util::get<std::string>(rep, "description", ""));
+        }
     }
 
     template<typename T, typename... Args>
-    typename std::enable_if<!std::is_void<T>::value, T>::type call(std::string rpc_name, Args... args)
+    typename std::enable_if<!std::is_void<T>::value, T>::type call(const std::string & rpc_name, Args... args)
     {
-        auto req = packer::request(rpc_name, args...);
+        auto req = pack_request(rpc_name, args...);
         const auto & rep = json::parse(call(req));
-
-        std::string text = rep.dump();
-
-        //auto code = json_util::get<int>(rep, "code", -1);
-        //auto content = json_util::get<T>(rep, "content");
+        auto ret_code = json_util::get<int>(rep, "code", 0);
+        if (ret_code != 0) {
+            throw std::runtime_error(json_util::get<std::string>(rep, "description", ""));
+        }
         return json_util::get<T>(rep, "content");
     }
 
 private:
+    template<typename ... Args>
+    static std::string pack_request(const std::string & url, Args && ... args)
+    {
+        return json{
+            {"url", url},
+            {"arguments", std::make_tuple(std::forward<Args>(args)...)},
+        }.dump();
+    }
+
+
     bool send(const std::string & data)
     {
         auto size = data.size();
@@ -76,6 +85,7 @@ private:
         return ec == 0;
     }
 
+private:
     boost::asio::io_service & io_service_;
     tcp::socket socket_;
 };
