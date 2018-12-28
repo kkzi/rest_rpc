@@ -1,4 +1,5 @@
-#include "include_single/rpc_server.hpp"
+//#include "include_single/rpc_server.hpp"
+#include "include/server.hpp"
 
 using namespace rpc;
 
