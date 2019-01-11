@@ -139,16 +139,7 @@
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="deps\json\json.hpp" />
-    <ClInclude Include="deps\json\json_util.h" />
-    <ClInclude Include="include\common.hpp" />
-    <ClInclude Include="include\connection.hpp" />
-    <ClInclude Include="include\cplusplus_14.hpp" />
-    <ClInclude Include="include\http_server.hpp" />
-    <ClInclude Include="include\io_context_pool.hpp" />
-    <ClInclude Include="include\packer.hpp" />
-    <ClInclude Include="include\router.hpp" />
-    <ClInclude Include="include\server.hpp" />
+    <ClInclude Include="include\rpc_client.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

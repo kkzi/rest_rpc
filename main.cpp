@@ -1,5 +1,4 @@
-//#include "include_single/rpc_server.hpp"
-#include "include/server.hpp"
+#include "include2/rpc_server.hpp"
 
 using namespace rpc;
 
@@ -29,14 +28,15 @@ void test(const std::string& str)
 
 int main()
 {
+
     rpc::server server(9000, 4);
 
-    dummy d;
-    server.route("add", &dummy::add, &d);
-    server.route("translate", translate);
-    server.route("hello", test);
+    //dummy d;
+    //server.route("add", &dummy::add, &d);
+    //server.route("translate", translate);
+    //server.route("hello", test);
 
-    server.route("test", test);
+    //server.route("test", test);
 
     //server.route("add2", [](int a, int b) ->int { return a + b; });
 

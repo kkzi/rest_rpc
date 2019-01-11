@@ -28,26 +28,11 @@ public:
         boost::asio::connect(socket_, endpoint_iterator);
     }
 
-    std::string call(const std::string & content)
-    {
-        bool r = send(content);
-        if (!r) {
-            throw std::runtime_error("call failed");
-        }
-
-        int32_t size = 0;
-        socket_.receive(boost::asio::buffer(&size, 4));
-        std::string recv_data;
-        recv_data.resize(size);
-        socket_.receive(boost::asio::buffer(&recv_data[0], size));
-        return recv_data;
-    }
-
     template<typename T = void, typename... Args>
     typename std::enable_if<std::is_void<T>::value>::type call(const std::string & rpc_name, Args... args)
     {
-        auto req = pack_request(rpc_name, args...);
-        const auto & rep = json::parse(call(req));
+        const auto & req = pack_request(rpc_name, args...);
+        const auto & rep = json::parse(call_helper(req));
         auto ret_code = json_util::get<int>(rep, "code", 0);
         if (ret_code != 0) {
             throw std::runtime_error(json_util::get<std::string>(rep, "description", ""));
@@ -57,8 +42,8 @@ public:
     template<typename T, typename... Args>
     typename std::enable_if<!std::is_void<T>::value, T>::type call(const std::string & rpc_name, Args... args)
     {
-        auto req = pack_request(rpc_name, args...);
-        const auto & rep = json::parse(call(req));
+        const auto & req = pack_request(rpc_name, args...);
+        const auto & rep = json::parse(call_helper(req));
         auto ret_code = json_util::get<int>(rep, "code", 0);
         if (ret_code != 0) {
             throw std::runtime_error(json_util::get<std::string>(rep, "description", ""));
@@ -76,6 +61,20 @@ private:
         }.dump();
     }
 
+    std::string call_helper(const std::string & content)
+    {
+        bool r = send(content);
+        if (!r) {
+            throw std::runtime_error("call failed");
+        }
+
+        int32_t size = 0;
+        socket_.receive(boost::asio::buffer(&size, 4));
+        std::string recv_data;
+        recv_data.resize(size);
+        socket_.receive(boost::asio::buffer(&recv_data[0], size));
+        return recv_data;
+    }
 
     bool send(const std::string & data)
     {

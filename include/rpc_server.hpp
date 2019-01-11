@@ -1,7 +1,7 @@
 /*
 a rest rpc server with json
 version 0.1.4
-https://github.com/kkzi/rest_rpc
+kkzi@github
 
 Licensed under the MIT License <http://opensource.org/licenses/MIT>.
 SPDX-License-Identifier: MIT
@@ -36,6 +36,7 @@ SOFTWARE.
 #include <cstdint>
 #include <iostream>
 #include <functional>
+#include <thread>
 #include <boost/asio.hpp>
 #include <boost/asio/deadline_timer.hpp>
 #include <json/json_util.h>
@@ -45,6 +46,15 @@ namespace rpc
 {
 
 using boost::asio::ip::tcp;
+using io_context = boost::asio::io_context;
+using thread_ptr = std::shared_ptr<std::thread>;
+
+static const size_t MAX_BUF_LEN = 1048576 * 10;
+static const size_t HEAD_LEN = 4;
+static const size_t PAGE_SIZE = 1024 * 1024;
+
+enum class execute_mode { SYNC, ASYNC };
+
 
 // common defines
 enum class result_code : int16_t
@@ -62,109 +72,7 @@ enum class result_code : int16_t
     GATEWAY_TIMEOUT = 504,
 };
 
-static const size_t MAX_BUF_LEN = 1048576 * 10;
-static const size_t HEAD_LEN = 4;
-static const size_t PAGE_SIZE = 1024 * 1024;
 
-
-
-class io_context_pool final : private boost::noncopyable
-{
-public:
-    explicit io_context_pool(std::size_t pool_size)
-        : io_cursor_(0)
-    {
-        for (auto i = 0; i < pool_size; ++i) {
-            auto io = std::make_shared<boost::asio::io_context>();
-            io_contexts_.push_back(io);
-            works_.push_back(std::make_shared<boost::asio::io_context::work>(*io));
-        }
-    }
-
-    ~io_context_pool()
-    {
-        stop();
-    }
-
-    void run()
-    {
-        std::vector<std::shared_ptr<std::thread>> threads;
-        for (auto & io : io_contexts_) {
-            threads.emplace_back(std::make_shared<std::thread>([](io_context_ptr svr) {
-                svr->run();
-            }, io));
-        }
-
-        for (auto & t : threads) {
-            t->join();
-        }
-    }
-
-    void stop()
-    {
-        for (auto & io : io_contexts_) {
-            io->stop();
-            io->reset();
-        }
-    }
-
-    boost::asio::io_context & get_io_service()
-    {
-        auto & io = *io_contexts_[io_cursor_];
-        ++io_cursor_;
-        if (io_cursor_ == io_contexts_.size()) io_cursor_ = 0;
-        return io;
-    }
-
-private:
-    typedef std::shared_ptr<boost::asio::io_context> io_context_ptr;
-    typedef std::shared_ptr<boost::asio::io_context::work> work_ptr;
-
-    std::vector<io_context_ptr> io_contexts_;
-    std::vector<work_ptr> works_;
-    std::size_t io_cursor_;
-};
-
-
-
-struct packer
-{
-    template<typename ... Args>
-    static std::string request(const std::string & url, Args && ... args)
-    {
-        return json{
-            {"url", url},
-            {"arguments", std::make_tuple(std::forward<Args>(args)...)},
-        }.dump();
-    }
-
-    template<typename T>
-    static std::string response(result_code code, const std::string & message, const T & content)
-    {
-        return json{ {"code", (int)code}, {"description", message}, {"content", content} }.dump();
-    }
-
-    static std::string response(result_code code, const std::string & message)
-    {
-        return json{ {"code", (int)code}, {"description", message} }.dump();
-    }
-
-    template<typename T>
-    static std::string success(const T & content)
-    {
-        return json{ {"code", result_code::OK}, {"content", content} }.dump();
-    }
-
-    static std::string success()
-    {
-        return json{ {"code", result_code::OK} }.dump();
-    }
-};
-
-
-
-
-enum class execute_mode { SYNC, ASYNC };
 
 template<typename T>
 struct function_traits;
@@ -194,6 +102,85 @@ struct function_traits : function_traits<decltype(&Callable::operator())> {};
 
 
 
+struct response
+{
+    int code{ (int)result_code::OK };
+    std::string description{ "" };
+    json content{ nullptr };
+
+    response(result_code code, const std::string & description = "", const json & content = nullptr)
+        : code((int)code)
+        , description(std::move(description))
+        , content(std::move(content))
+    {
+
+    }
+
+    virtual ~response()
+    {
+
+    }
+
+    std::string dump() const
+    {
+        auto j = json{ {"code", code} };
+        if (!description.empty()) j["description"] = description;
+        if (!content.is_null()) j["content"] = content;
+        return j.dump();
+    }
+};
+
+struct success : public response
+{
+    success(const std::string & message = "", const json & content = nullptr)
+        : response(result_code::OK, message, content)
+    {
+
+    }
+};
+
+
+
+struct packer
+{
+    template<typename ... Args>
+    static std::string request(const std::string & url, Args && ... args)
+    {
+        return json{
+            {"url", url},
+            {"arguments", std::make_tuple(std::forward<Args>(args)...)},
+        }.dump();
+    }
+
+    static std::string response(result_code code, const std::string & message)
+    {
+        return rpc::response{ code, message, nullptr }.dump();
+    }
+
+    template<class T, typename = std::enable_if_t<!std::is_void<T>::value>>
+    static std::string response(result_code code, const std::string & message, const T & content)
+    {
+        return rpc::response{ code, message, content }.dump();
+    }
+
+    static std::string success()
+    {
+        return rpc::success("", nullptr).dump();
+    }
+
+    template<class T, typename = std::enable_if_t<!std::is_void<T>::value>>
+    static std::string success(const T & content)
+    {
+        return rpc::success("", content).dump();
+    }
+
+};
+
+
+
+
+
+
 class connection;
 class router final : boost::noncopyable
 {
@@ -213,13 +200,12 @@ public:
     {
         using namespace std::placeholders;
         assert(!name.empty());
-        
-        std::string url = name.at(0) == '/' ? name : '/' + name;
+        auto url = fix_url(name);
         map_invokers_[url] = [=](const json & arguments, std::string & reply, execute_mode & exe_mode) {
             using args_tuple = typename function_traits<Function>::args_tuple_t;
             exe_mode = execute_mode::SYNC;
             try {
-                auto tp = arguments.get<args_tuple>();
+                const auto & tp = arguments.get<args_tuple>();
                 call(func, reply, tp);
                 exe_mode = mode;
             }
@@ -233,7 +219,8 @@ public:
     void route(const std::string & name, const Function & func, Self * self)
     {
         using namespace std::placeholders;
-        map_invokers_[name] = [=](const json & args, std::string & reply, execute_mode & exe_mode) {
+        auto url = fix_url(name);
+        map_invokers_[url] = [=](const json & args, std::string & reply, execute_mode & exe_mode) {
             using args_tuple = typename function_traits<Function>::args_tuple_t;
             exe_mode = execute_mode::SYNC;
             try {
@@ -252,6 +239,11 @@ public:
         map_invokers_.erase(name);
     }
 
+    std::string fix_url(const std::string & url)
+    {
+        return url.at(0) == '/' ? std::move(url) : '/' + url;
+    }
+
     template<typename T>
     void execute_function(const std::string & data, T conn)
     {
@@ -259,7 +251,7 @@ public:
         try {
             const auto & req = json::parse(data);
             auto url = json_util::get<std::string>(req, "url", "");
-            if (url.at(0) != '/') url = '/' + url;
+            url = fix_url(url);
 
             auto it = map_invokers_.find(url);
             if (it == map_invokers_.end()) {
@@ -281,12 +273,13 @@ public:
         }
     }
 
+    // Handle from http request
     std::string execute_function(const std::string & data)
     {
         try {
             const auto & req = json::parse(data);
             auto url = json_util::get<std::string>(req, "url", "");
-            if (url.at(0) != '/') url = '/' + url;
+            url = fix_url(url);
 
             auto it = map_invokers_.find(url);
             if (it == map_invokers_.end()) {
@@ -314,6 +307,7 @@ private:
     router(const router &) = delete;
     router(router &&) = delete;
 
+private:
     template<typename F, size_t... idx, typename... Args>
     static typename std::result_of<F(Args...)>::type
         call_helper(const F & f, const std::index_sequence<idx...> &, const std::tuple<Args...> & tup)
@@ -446,7 +440,8 @@ private:
             if (!ec) {
                 const int body_len = *((int*)(head_));
                 if (body_len > 0 && body_len < MAX_BUF_LEN) {
-                    if (data_.size() < body_len) { data_.resize(body_len); }
+                    //if (data_.size() < body_len) {}
+                    data_.resize(body_len);
                     read_body(body_len);
                     return;
                 }
@@ -538,15 +533,20 @@ class server final : private boost::noncopyable
 {
 
 public:
-    server(uint16_t port, size_t size, size_t timeout_seconds = 15, size_t check_seconds = 10)
-        : io_pool_(size)
-        , acceptor_(io_pool_.get_io_service(), tcp::endpoint(tcp::v4(), port))
+    server(uint16_t port, size_t size, size_t timeout_seconds = 15, size_t check_seconds = 3)
+        : intruppted_(false)
+        , acceptor_(io_, tcp::endpoint(tcp::v4(), port))
         , timeout_seconds_(timeout_seconds)
         , check_seconds_(check_seconds)
     {
         using namespace std::placeholders;
         router::instance().set_callback(std::bind(&server::callback, this, _1, _2, _3, _4));
+
         do_accept();
+
+        for (auto i = 0; i < size; ++i) {
+            work_threads_.emplace_back(std::make_shared<std::thread>([=] { io_.run(); }));
+        }
         check_thread_ = std::make_shared<std::thread>(std::bind(&server::clean, this));
 
         route("/ping", []() { return "pong"; });
@@ -554,13 +554,20 @@ public:
 
     ~server()
     {
-        io_pool_.stop();
-        thd_->join();
+        intruppted_.store(true);
+        acceptor_.close();
+        io_.stop();
+        io_.reset();
+        check_thread_->join();
+
+        for (auto & t : work_threads_) {
+            t->join();
+        }
     }
 
-    void run()
+    void run(bool block = false)
     {
-        thd_ = std::make_shared<std::thread>([this] { io_pool_.run(); });
+        if (block) io_.run();
     }
 
     template<execute_mode model = execute_mode::SYNC, typename Function>
@@ -587,10 +594,11 @@ public:
 private:
     void do_accept()
     {
-        auto conn = std::make_shared<connection>(io_pool_.get_io_service(), timeout_seconds_);
+        auto conn = std::make_shared<connection>(io_, timeout_seconds_);
         acceptor_.async_accept(conn->socket(), [=](boost::system::error_code ec) {
             if (ec) {
                 //LOG(INFO) << "acceptor error: " << ec.message();
+                return;
             }
             else {
                 conn->start();
@@ -605,7 +613,7 @@ private:
 
     void clean()
     {
-        while (true) {
+        while (!intruppted_) {
             std::this_thread::sleep_for(std::chrono::seconds(check_seconds_));
 
             std::unique_lock<std::mutex> lock(mtx_);
@@ -626,15 +634,16 @@ private:
     }
 
 private:
-    io_context_pool io_pool_;
+    std::atomic_bool intruppted_;
+    io_context io_;
     tcp::acceptor acceptor_;
-    std::shared_ptr<std::thread> thd_;
+    std::vector<thread_ptr> work_threads_;
+    thread_ptr check_thread_;
     std::size_t timeout_seconds_;
 
     std::unordered_map<int64_t, std::shared_ptr<connection>> connections_;
     int64_t conn_id_ = 0;
     std::mutex mtx_;
-    std::shared_ptr<std::thread> check_thread_;
     size_t check_seconds_;
 };
 
