@@ -40,6 +40,7 @@ SOFTWARE.
 #include <boost/asio.hpp>
 #include <boost/asio/deadline_timer.hpp>
 #include <json/json_util.h>
+#include "rpc_defs.h"
 
 
 namespace rpc
@@ -54,23 +55,6 @@ static const size_t HEAD_LEN = 4;
 static const size_t PAGE_SIZE = 1024 * 1024;
 
 enum class execute_mode { SYNC, ASYNC };
-
-
-// common defines
-enum class result_code : int16_t
-{
-    OK = 0,
-    FAIL = 1,
-    BAD_REQUEST = 400,
-    UNAUTHORIZED = 401,
-    NOT_FOUND = 404,
-    REQUEST_TIMEOUT = 408,
-    INTERNAL_SERVER_ERROR = 500,
-    NOT_IMPLEMENTED = 501,
-    BAD_GATEWAY = 502,
-    SERVICE_UNAVAILABLE = 503,
-    GATEWAY_TIMEOUT = 504,
-};
 
 
 
@@ -102,44 +86,6 @@ struct function_traits : function_traits<decltype(&Callable::operator())> {};
 
 
 
-struct response
-{
-    int code{ (int)result_code::OK };
-    std::string description{ "" };
-    json content{ nullptr };
-
-    response(result_code code, const std::string & description = "", const json & content = nullptr)
-        : code((int)code)
-        , description(std::move(description))
-        , content(std::move(content))
-    {
-
-    }
-
-    virtual ~response()
-    {
-
-    }
-
-    std::string dump() const
-    {
-        auto j = json{ {"code", code} };
-        if (!description.empty()) j["description"] = description;
-        if (!content.is_null()) j["content"] = content;
-        return j.dump();
-    }
-};
-
-struct success : public response
-{
-    success(const std::string & message = "", const json & content = nullptr)
-        : response(result_code::OK, message, content)
-    {
-
-    }
-};
-
-
 
 struct packer
 {
@@ -152,26 +98,26 @@ struct packer
         }.dump();
     }
 
-    static std::string response(result_code code, const std::string & message)
-    {
-        return rpc::response{ code, message, nullptr }.dump();
-    }
-
     template<class T, typename = std::enable_if_t<!std::is_void<T>::value>>
     static std::string response(result_code code, const std::string & message, const T & content)
     {
-        return rpc::response{ code, message, content }.dump();
+        return json(rpc::reply{ code, message, content }).dump();
+    }
+
+    static std::string response(result_code code, const std::string & message)
+    {
+        return response(code, message, nullptr);
     }
 
     static std::string success()
     {
-        return rpc::success("", nullptr).dump();
+        return response(result_code::OK, "", nullptr);
     }
 
     template<class T, typename = std::enable_if_t<!std::is_void<T>::value>>
     static std::string success(const T & content)
     {
-        return rpc::success("", content).dump();
+        return response(result_code::OK, "", content);
     }
 
 };
@@ -317,7 +263,7 @@ private:
 
     template<typename F, typename... Args>
     static typename std::enable_if<std::is_void<typename std::result_of<F(Args...)>::type>::value>::type
-        call(const F & f, std::string & result, std::tuple<Args...> & tp)
+        call(const F & f, std::string & result, const std::tuple<Args...> & tp)
     {
         call_helper(f, std::make_index_sequence<sizeof...(Args)>{}, tp);
         result = packer::success();

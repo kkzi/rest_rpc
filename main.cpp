@@ -1,4 +1,4 @@
-#include "include2/rpc_server.hpp"
+#include "rpc_server.hpp"
 
 using namespace rpc;
 
@@ -21,9 +21,9 @@ void hello(const std::string& str)
     std::cout << "hello " << str << std::endl;
 }
 
-void test(const std::string& str)
+void test()
 {
-    std::cout << "hello " << str << std::endl;
+    std::cout << "test " << std::endl;
 }
 
 int main()
@@ -34,11 +34,11 @@ int main()
     //dummy d;
     //server.route("add", &dummy::add, &d);
     //server.route("translate", translate);
-    //server.route("hello", test);
 
-    //server.route("test", test);
+    server.route("hello", hello);
+    server.route("test", test);
 
-    //server.route("add2", [](int a, int b) ->int { return a + b; });
+    server.route("add2", [](int a, int b) ->int { return a + b; });
 
     server.run();
 
