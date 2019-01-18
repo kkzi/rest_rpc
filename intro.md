@@ -207,3 +207,41 @@ catch (const std::exception & e) {
 }
 ```
 
+
+
+
+
+## message_hub
+
+### 创建hub
+
+```c++
+rpc::message_hub hub;
+bool success = hub.create(6666);		// 指定端口号为6666
+```
+
+
+
+### 订阅topic
+
+```c++
+void on_message(const std::string& topic, const std::string& message)
+{
+    std::cout << message << std::endl;
+}
+
+rpc::message_hub hub;
+bool success = hub.connect("127.0.0.1", 6666);
+hub.subscribe("topic.ats.test", on_message);
+```
+
+
+
+发布消息
+
+```c++
+rpc::message_hub hub;
+bool success = hub.connect("127.0.0.1", 6666);
+hub.publish("hello worrld");
+```
+
