@@ -5,6 +5,7 @@
 #include <iostream>
 #include <mutex>
 #include <boost/asio.hpp>
+#include <boost/core/noncopyable.hpp>
 
 
 namespace rpc

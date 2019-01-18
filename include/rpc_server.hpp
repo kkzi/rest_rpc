@@ -9,7 +9,7 @@
 #include <functional>
 #include <thread>
 #include <boost/asio.hpp>
-#include <boost/asio/deadline_timer.hpp>
+#include <boost/core/noncopyable.hpp>
 #include <json/json_util.h>
 #include "rpc_defs.h"
 
@@ -99,7 +99,7 @@ struct packer
 
 
 class connection;
-class router final : boost::noncopyable
+class router final : private boost::noncopyable
 {
 public:
     static router & instance()
