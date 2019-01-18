@@ -23,7 +23,17 @@ rpc::server s(60060, 1);	// 第一个参数是绑定的端口号；第二个参�
 ### 注册被调用接口
 
 ```c++
-s.route();
+s.route("add", [](int a, int b){ return a + b; });
+
+struct dummy
+{
+    int add(int a, int b)
+    {
+        return a + b;
+    }
+}
+dummy d;
+s.route("add", &dummy::add, &d);
 ```
 
 
