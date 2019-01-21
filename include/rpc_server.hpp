@@ -20,6 +20,7 @@ namespace rpc
 using boost::asio::ip::tcp;
 using io_context = boost::asio::io_context;
 using thread_ptr = std::shared_ptr<std::thread>;
+using debug_callback_t = std::function<void(const std::string &)>;
 
 static const size_t MAX_BUF_LEN = 1048576 * 10;
 static const size_t HEAD_LEN = 4;
@@ -283,12 +284,13 @@ private:
 class connection final : public std::enable_shared_from_this<connection>, private boost::noncopyable
 {
 public:
-    connection(boost::asio::io_service& io_service, std::size_t timeout_seconds)
+    connection(boost::asio::io_service& io_service, std::size_t timeout_seconds, debug_callback_t log_func)
         : socket_(io_service)
         , data_(PAGE_SIZE)
         , message_{ boost::asio::buffer(head_), boost::asio::buffer(data_.data(), data_.size()) }
         , timer_(io_service)
         , timeout_seconds_(timeout_seconds)
+        , log_func_(log_func)
         , has_closed_(false)
     {
 
@@ -316,11 +318,15 @@ public:
 
     void response(const char * data, size_t len)
     {
+        if (log_func_) log_func_("response: " + std::string(data, len));
+
         message_[0] = boost::asio::buffer(&len, 4);
         message_[1] = boost::asio::buffer((char *)data, len);
         reset_timer();
         auto self = this->shared_from_this();
         boost::asio::async_write(socket_, message_, [this, self](boost::system::error_code ec, std::size_t length) {
+            if (log_func_) log_func_("response ok");
+
             cancel_timer();
             if (has_closed()) return;
 
@@ -328,17 +334,17 @@ public:
                 read_head();
             }
             else {
-                //LOG(INFO) << ec.message();
+                if (log_func_) log_func_("response failed: " + ec.message());
             }
         });
     }
 
-    void set_conn_id(int64_t id)
+    void set_connection_id(int64_t id)
     {
         conn_id_ = id;
     }
 
-    int64_t conn_id() const
+    int64_t connection_id() const
     {
         return conn_id_;
     }
@@ -350,14 +356,12 @@ private:
         auto self(this->shared_from_this());
         boost::asio::async_read(socket_, boost::asio::buffer(head_), [this, self](boost::system::error_code ec, std::size_t length) {
             if (!socket_.is_open()) {
-                //LOG(INFO) << "socket already closed";
                 return;
             }
 
             if (!ec) {
                 const int body_len = *((int*)(head_));
                 if (body_len > 0 && body_len < MAX_BUF_LEN) {
-                    //if (data_.size() < body_len) {}
                     data_.resize(body_len);
                     read_body(body_len);
                     return;
@@ -386,16 +390,17 @@ private:
             cancel_timer();
 
             if (!socket_.is_open()) {
-                //LOG(INFO) << "socket already closed";
+                if (log_func_) log_func_("connection already closed. " + std::to_string(conn_id_));
                 return;
             }
 
             if (!ec) {
                 std::string data(data_.begin(), data_.end());
+                if (log_func_) log_func_("handle request: " + data);
                 router::instance().execute_function(data, this);
             }
             else {
-                //LOG(INFO) << ec.message();
+                if (log_func_) log_func_("read request failed: " + ec.message());
             }
         });
     }
@@ -433,6 +438,7 @@ private:
         }
     }
 
+private:
     tcp::socket socket_;
     char head_[HEAD_LEN];
     std::vector<char> data_;
@@ -441,6 +447,8 @@ private:
     std::size_t timeout_seconds_;
     int64_t conn_id_ = 0;
     std::atomic_bool has_closed_;
+
+    debug_callback_t  log_func_;
 };
 
 
@@ -508,19 +516,31 @@ public:
         }
     }
 
+    void set_debug_enable(debug_callback_t func)
+    {
+        assert(func);
+        log_func_ = func;
+    }
+
+    void set_debug_disable()
+    {
+        log_func_ = nullptr;
+    }
+
 private:
     void do_accept()
     {
-        auto conn = std::make_shared<connection>(io_, timeout_seconds_);
+        auto conn = std::make_shared<connection>(io_, timeout_seconds_, log_func_);
         acceptor_.async_accept(conn->socket(), [=](boost::system::error_code ec) {
             if (ec) {
-                //LOG(INFO) << "acceptor error: " << ec.message();
+                if (log_func_) log_func_("accept failed: " + ec.message());
                 return;
             }
             else {
+                if (log_func_) log_func_("accept success. " + std::to_string(conn_id_));
                 conn->start();
                 std::unique_lock<std::mutex> lock(mtx_);
-                conn->set_conn_id(conn_id_);
+                conn->set_connection_id(conn_id_);
                 connections_.emplace(conn_id_++, conn);
             }
 
@@ -547,7 +567,7 @@ private:
 
     void callback(const std::string & topic, const std::string & result, connection * conn, bool has_error = false)
     {
-        response(conn->conn_id(), result);
+        response(conn->connection_id(), result);
     }
 
 private:
@@ -562,6 +582,8 @@ private:
     int64_t conn_id_ = 0;
     std::mutex mtx_;
     size_t check_seconds_;
+
+    debug_callback_t log_func_;
 };
 
 
